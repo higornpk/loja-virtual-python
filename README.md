@@ -10,7 +10,7 @@ Projeto de loja virtual desenvolvido em Python, criado como parte do meu aprendi
 - Finalização de compra
 - Cadastro de novo produtos
 
-## conceitos aplicados
+## Conceitos aplicados
 
 - Programação Orientada a Objetos (classes 'Produto' e 'Carrinho')
 - Tratamento de erros e validação de entrada do usuário
