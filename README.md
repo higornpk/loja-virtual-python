@@ -9,22 +9,23 @@ Projeto de loja virtual desenvolvido em Python, criado como parte do meu aprendi
 - Visualização do carrinho com total
 - Finalização de compra
 - Cadastro de novo produtos
+- Persistência de dados em arquivo JSON (produtos e carrinho)
 
 ## Conceitos aplicados
 
 - Programação Orientada a Objetos (classes 'Produto' e 'Carrinho')
 - Tratamento de erros e validação de entrada do usuário
 - Estruturas de repetição e condicionais
+- Manipulação de arquivos e serialização de dados (JSON)
 
 ## Como executar
 
-'''bash
+\'\'\'bash
 python loja.py
-'''
+\'\'\'
 
 ##Próximos passos
 
-- Persistência de dados em arquivo
 - Migração para banco de dados SQL
 
 
