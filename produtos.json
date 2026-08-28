@@ -1,0 +1,22 @@
+[
+    {
+        "nome": "Camiseta",
+        "preco": 49.9,
+        "estoque": 10
+    },
+    {
+        "nome": "Calça Jeans",
+        "preco": 129.9,
+        "estoque": 5
+    },
+    {
+        "nome": "Tênis",
+        "preco": 199.9,
+        "estoque": 1
+    },
+    {
+        "nome": "Jaqueta",
+        "preco": 188.9,
+        "estoque": 21
+    }
+]

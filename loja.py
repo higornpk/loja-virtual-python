@@ -1,4 +1,6 @@
-#Adicionando POO (Programação Orientada a Objeto) no projeto.
+import json
+import os
+
 
 class Produto:
 #Criando defs que serão acionadas quando chamarem a classe Produto.
@@ -29,13 +31,58 @@ class Carrinho:
 
     def limpar(self):
         self.itens.clear()
+
+    def salvar(self):
+        nomes = [produto.nome for produto in self.itens]
+        with open(ARQUIVO_CARRINHO, "w", encoding="utf-8") as arquivo:
+            json.dump(nomes, arquivo, indent=4, ensure_ascii=False)
+
+    def carregar(self, lista_produtos):
+        if not os.path.exists(ARQUIVO_CARRINHO):
+            return
+
+        with open(ARQUIVO_CARRINHO, "r", encoding="utf-8") as arquivo:
+            nomes = json.load(arquivo)
+
+        for nome in nomes:
+            for produto in lista_produtos:
+                if produto.nome == nome:
+                    self.itens.append(produto)
+                    break
+
     
-produtos = [
-    Produto("Camiseta", 49.90, 10),
-    Produto("Calça Jeans", 129.90, 5),
-    Produto("Tênis", 199.90, 3),
-]
+
+ARQUIVO_PRODUTOS = "produtos.json"
+ARQUIVO_CARRINHO = "    carrinho.json"
+
+def carregar_produtos():
+    if not os.path.exists(ARQUIVO_PRODUTOS):
+        return [
+            Produto("Camiseta", 49.90, 10),
+            Produto("Calça jeans", 129.90, 5),
+            Produto("Tênis", 199.90, 3),
+         ]
+
+    with open(ARQUIVO_PRODUTOS, "r", encoding="utf-8") as arquivo:
+        dados = json.load(arquivo)
+
+    lista_produtos = []
+    for item in dados:
+        lista_produtos.append(Produto(item["nome"], item["preco"], item["estoque"]))
+
+    return lista_produtos 
+def salvar_produtos():
+    dados = []
+    for produto in produtos:
+        dados.append({"nome": produto.nome, "preco": produto.preco, "estoque": produto.estoque})
+
+    with open(ARQUIVO_PRODUTOS, "w", encoding="utf-8") as arquivo:
+        json.dump(dados, arquivo, indent=4, ensure_ascii=False)
+
+
+produtos = carregar_produtos()
 carrinho = Carrinho()
+carrinho.carregar(produtos)
 
 def linha(msg, caractere = "="):
     tamanho = len(msg) + 10
@@ -120,6 +167,7 @@ def finalizar_compra():
     if confirmacao == "s":
         linha("Compra finalizada com Sucesso!", "-")
         carrinho.limpar()
+        carrinho.salvar()
     else:
         print("Compra Cancelada.")
         
@@ -142,15 +190,19 @@ while True:
         mostrar_produtos()
     elif opcao == "2":
         adicionar_ao_carrinho()
+        salvar_produtos()
+        carrinho.salvar()
     elif opcao == "3":
         ver_carrinho()
     elif opcao == "4":
         finalizar_compra()
     elif opcao == "5":
         cadastrar_produto()
+        salvar_produtos()
     elif opcao == "6":
         print("\n Obrigado por visitar a loja!")
         break
 
     else:
         print("\n Opção inválida, tente novamente")
+
