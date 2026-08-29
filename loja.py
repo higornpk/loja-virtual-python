@@ -2,8 +2,6 @@ import os
 import sqlite3
 
 class Produto:
-#Criando defs que serão acionadas quando chamarem a classe Produto.
-
     def __init__(self, nome, preco, estoque):
         self.nome = nome
         self.preco = preco
@@ -19,6 +17,8 @@ class Carrinho:
         self.itens.append(produto)
         produto.estoque -= 1
         inserir_item_carrinho_banco(produto)
+
+        #O carrinho referencia os mesmos objetos Produto já carregados, não cópias. Assim o estoque reflete a mesma instância em memória e no banco
 
     def esta_vazio(self):
         return len(self.itens) == 0
@@ -64,6 +64,8 @@ def criar_tabelas():
         )
     """)
 
+    # Guardei só o produto_id (chave estrangeira), não os dados do produto duplicados aqui. Os detalhes (nome. preco) sempre vêm de produtos via JOIN
+
     conexao.commit()
     conexao.close()
 def inserir_produto_banco(produto):
@@ -74,6 +76,9 @@ def inserir_produto_banco(produto):
         "INSERT INTO produtos (nome, preco, estoque) Values (?, ?, ?)",
         (produto.nome, produto.preco, produto.estoque)
     )
+
+    # Query parametrizada (com ?) em vez de concatenar string:
+    # evita SQL Injection e trata os valores com segurança.
 
     conexao.commit()
     conexao.close()
@@ -113,6 +118,9 @@ def atualizar_estoque_banco(produto):
         "UPDATE produtos set estoque = ? WHERE id = ?", (produto.estoque, produto.id)
     )
 
+    # Query parametrizada (com ?) em vez de concatenar string:
+    # evita SQL Injection e trata os valores com segurança.
+
     conexao.commit()
     conexao.close()
 def cadastrar_produto_banco(produto):
@@ -121,6 +129,8 @@ def cadastrar_produto_banco(produto):
     linhas = listar_produtos_banco()
     ultima_linha = linhas[-1]
     produto.id = ultima_linha[0]
+
+    # Após inserir, buscamos o id gerado pelo AUTOINCREMENT e guardamos no objeto Python que é necessário para futuros UPDATES
 def inserir_item_carrinho_banco(produto):
     conexao = sqlite3.connect(NOME_BANCO)
     cursor = conexao.cursor()
@@ -128,6 +138,9 @@ def inserir_item_carrinho_banco(produto):
     cursor.execute(
         "INSERT INTO carrinho (produto_id) VALUES (?)", (produto.id,)
     )
+
+    # Query parametrizada (com ?) em vez de concatenar string:
+    # evita SQL Injection e trata os valores com segurança.
 
     conexao.commit()
     conexao.close()
@@ -168,8 +181,6 @@ def linha(msg, caractere = "="):
     print(f"\n{caractere * tamanho}")
     print(f" {msg.center(tamanho)}")
     print(f"{caractere * tamanho}\n")
-
-    #Função para nao precisar reescrever toda vez que for fazer um titulo  
 def cadastrar_produto():
     linha ("Cadastrar novo produto", "-")
     nome = input("Nome: ")
@@ -180,6 +191,8 @@ def cadastrar_produto():
     except ValueError:
         print("\nPreço inválido. Use números, ex: 59.90")
         return
+
+    # try/except em vez de isdigit(): preço tem casas decimais, e isdigit() só reconhece números inteiros.
 
     estoque_texto = input("Quantidade em estoque: ")
     if not estoque_texto.isdigit():
@@ -194,7 +207,6 @@ def cadastrar_produto():
 def mostrar_produtos():
     for i, produto in enumerate(produtos):
         print(f"{i + 1}. {produto}")
-    # for i, produto in enumerate(produtos): è um loop que repete um bloco de códigos para cada item da lista produtos, usando a função enumerate() que entrega a cada volta desse looping dois valores que sâo: o indice(posição) e o item, por isso as variáveis i -> que recebe o indice e o produto -> que recebe o item relacionado ao indice
 def adicionar_ao_carrinho():
     print()
     mostrar_produtos()
@@ -203,16 +215,13 @@ def adicionar_ao_carrinho():
 
     if not escolha.isdigit():
         print("\nEntrada inválida. Digite um número")
-        return
-        #Verifica se o texto e composto só por números
+        return      
 
     indice = int(escolha) - 1
-        # coverte o texto digitado em número inteiro, para poder usar como indice da lista
 
     if indice < 0 or indice >= len(produtos):
         print("\nProduto não encontrado.")
         return
-        #conta quantos itens tem na lista, verificando se o número escolhido está fora dos limites da lista
     
     produto = produtos[indice]
 
@@ -228,10 +237,10 @@ def ver_carrinho():
     if carrinho.esta_vazio():
         print("\nSeu carrinho está vazio.")
         return
-        #verifica se o carrinho esta vazio e retorna o print caso esteja.
 
     linha("Seu carrinho", "-")
-    total = 0 # variavel acumuladora, para ir somando os preços conforme o loop passa por cada produto
+    total = 0 
+
     for produto in carrinho.itens:
         print(f"- {produto.nome} - R$ {produto.preco:.2f}")
     total = carrinho.calcular_total()
@@ -260,8 +269,6 @@ while True:
     print("4. Finalizar compra")
     print("5. Cadastrar novo produto")
     print("6. Sair")
-
-    #Menu principal da loja
 
     opcao = input("Escolha uma opção: ")
 
