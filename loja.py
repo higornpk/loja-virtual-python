@@ -1,6 +1,5 @@
-import json
 import os
-
+import sqlite3
 
 class Produto:
 #Criando defs que serão acionadas quando chamarem a classe Produto.
@@ -19,6 +18,7 @@ class Carrinho:
     def adicionar (self, produto):
         self.itens.append(produto)
         produto.estoque -= 1
+        inserir_item_carrinho_banco(produto)
 
     def esta_vazio(self):
         return len(self.itens) == 0
@@ -31,58 +31,137 @@ class Carrinho:
 
     def limpar(self):
         self.itens.clear()
+        limpar_carrinho_banco()
 
-    def salvar(self):
-        nomes = [produto.nome for produto in self.itens]
-        with open(ARQUIVO_CARRINHO, "w", encoding="utf-8") as arquivo:
-            json.dump(nomes, arquivo, indent=4, ensure_ascii=False)
-
-    def carregar(self, lista_produtos):
-        if not os.path.exists(ARQUIVO_CARRINHO):
-            return
-
-        with open(ARQUIVO_CARRINHO, "r", encoding="utf-8") as arquivo:
-            nomes = json.load(arquivo)
-
-        for nome in nomes:
-            for produto in lista_produtos:
-                if produto.nome == nome:
-                    self.itens.append(produto)
-                    break
-
+    def carregar_do_banco(self):
+        linhas = listar_itens_carrinho_banco()
+        for id_produto, nome, preco, estoque in linhas:
+            produto = Produto(nome, preco,estoque)
+            produto.id = id_produto
+            self.itens.append(produto)
     
+NOME_BANCO = "loja.db"
 
-ARQUIVO_PRODUTOS = "produtos.json"
-ARQUIVO_CARRINHO = "    carrinho.json"
 
-def carregar_produtos():
-    if not os.path.exists(ARQUIVO_PRODUTOS):
-        return [
-            Produto("Camiseta", 49.90, 10),
-            Produto("Calça jeans", 129.90, 5),
-            Produto("Tênis", 199.90, 3),
-         ]
+def criar_tabelas():
+    conexao = sqlite3.connect(NOME_BANCO)
+    cursor = conexao.cursor()
 
-    with open(ARQUIVO_PRODUTOS, "r", encoding="utf-8") as arquivo:
-        dados = json.load(arquivo)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS produtos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            preco REAL NOT NULL,
+            estoque INTEGER NOT NULL
+        )    
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS carrinho (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            produto_id INTEGER NOT NULL,
+            FOREIGN KEY (produto_id) REFERENCES produtos (id)
+        )
+    """)
+
+    conexao.commit()
+    conexao.close()
+def inserir_produto_banco(produto):
+    conexao = sqlite3.connect(NOME_BANCO)
+    cursor = conexao.cursor()
+
+    cursor.execute(
+        "INSERT INTO produtos (nome, preco, estoque) Values (?, ?, ?)",
+        (produto.nome, produto.preco, produto.estoque)
+    )
+
+    conexao.commit()
+    conexao.close()
+def listar_produtos_banco():
+    conexao = sqlite3.connect(NOME_BANCO)
+    cursor = conexao.cursor()
+
+    cursor.execute("SELECT id, nome, preco, estoque FROM produtos")
+    linhas = cursor.fetchall()
+
+    conexao.close()
+    return linhas
+def popular_produtos_iniciais():
+    linhas = listar_produtos_banco()
+    if linhas:
+        return
+
+    inserir_produto_banco(Produto("Camiseta", 49.90, 10))
+    inserir_produto_banco(Produto("calça jeans", 129.90, 5))
+    inserir_produto_banco(Produto("Tênis", 199.90, 3))
+def carregar_produtos_banco():
+    linhas = listar_produtos_banco()
 
     lista_produtos = []
-    for item in dados:
-        lista_produtos.append(Produto(item["nome"], item["preco"], item["estoque"]))
+    for linha_produto in linhas:
+        id_produto, nome, preco, estoque = linha_produto
+        produto = Produto(nome, preco, estoque)
+        produto.id = id_produto
+        lista_produtos.append(produto)  
 
-    return lista_produtos 
-def salvar_produtos():
-    dados = []
-    for produto in produtos:
-        dados.append({"nome": produto.nome, "preco": produto.preco, "estoque": produto.estoque})
+    return lista_produtos
+def atualizar_estoque_banco(produto):
+    conexao = sqlite3.connect(NOME_BANCO)
+    cursor = conexao.cursor()
 
-    with open(ARQUIVO_PRODUTOS, "w", encoding="utf-8") as arquivo:
-        json.dump(dados, arquivo, indent=4, ensure_ascii=False)
+    cursor.execute(
+        "UPDATE produtos set estoque = ? WHERE id = ?", (produto.estoque, produto.id)
+    )
+
+    conexao.commit()
+    conexao.close()
+def cadastrar_produto_banco(produto):
+    inserir_produto_banco(produto)
+
+    linhas = listar_produtos_banco()
+    ultima_linha = linhas[-1]
+    produto.id = ultima_linha[0]
+def inserir_item_carrinho_banco(produto):
+    conexao = sqlite3.connect(NOME_BANCO)
+    cursor = conexao.cursor()
+
+    cursor.execute(
+        "INSERT INTO carrinho (produto_id) VALUES (?)", (produto.id,)
+    )
+
+    conexao.commit()
+    conexao.close()
+def listar_itens_carrinho_banco():
+    conexao = sqlite3.connect(NOME_BANCO)
+    cursor = conexao.cursor()
+
+    cursor.execute("""
+        SELECT produtos.id, produtos.nome, produtos.preco, produtos.estoque
+        FROM carrinho
+        JOIN produtos on carrinho.produto_id = produtos.id
+    """)
+    linhas = cursor.fetchall()
+
+    conexao.close()
+    return linhas
+def limpar_carrinho_banco():
+    conexao = sqlite3.connect(NOME_BANCO)
+    cursor = conexao.cursor()
+
+    cursor.execute("DELETE FROM carrinho")
+
+    conexao.commit
+    conexao.close()
 
 
-produtos = carregar_produtos()
+criar_tabelas()
+popular_produtos_iniciais()
+produtos = carregar_produtos_banco()
+
 carrinho = Carrinho()
-carrinho.carregar(produtos)
+carrinho.carregar_do_banco()
+
+
 
 def linha(msg, caractere = "="):
     tamanho = len(msg) + 10
@@ -110,6 +189,7 @@ def cadastrar_produto():
 
     novo_produto = Produto(nome, preco, estoque)
     produtos.append(novo_produto)
+    cadastrar_produto_banco(novo_produto)
     print(f"\n'{nome}' cadastrado com sucesso!")
 def mostrar_produtos():
     for i, produto in enumerate(produtos):
@@ -141,6 +221,7 @@ def adicionar_ao_carrinho():
         return
 
     carrinho.adicionar(produto)
+    atualizar_estoque_banco(produto)
 
     print(f"\n'{produto.nome}' adicionado ao carrinho!")
 def ver_carrinho():
@@ -167,7 +248,6 @@ def finalizar_compra():
     if confirmacao == "s":
         linha("Compra finalizada com Sucesso!", "-")
         carrinho.limpar()
-        carrinho.salvar()
     else:
         print("Compra Cancelada.")
         
@@ -190,19 +270,19 @@ while True:
         mostrar_produtos()
     elif opcao == "2":
         adicionar_ao_carrinho()
-        salvar_produtos()
-        carrinho.salvar()
     elif opcao == "3":
         ver_carrinho()
     elif opcao == "4":
         finalizar_compra()
     elif opcao == "5":
         cadastrar_produto()
-        salvar_produtos()
     elif opcao == "6":
         print("\n Obrigado por visitar a loja!")
         break
 
     else:
         print("\n Opção inválida, tente novamente")
+
+
+    
 
