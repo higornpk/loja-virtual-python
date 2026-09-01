@@ -13,8 +13,8 @@ Projeto de loja virtual desenvolvido em Python, criado como parte do meu aprendi
 
 ## Estrutura do projeto
 
-- `Loja.py` - menu principal e fluxo de interação com o usuário
-- `modelos.py` - classes `Produtos` e `Carrinho`
+- `loja.py` - menu principal e fluxo de interação com o usuário
+- `modelos.py` - classes `Produto` e `Carrinho`
 - `banco.py` - funções de acesso ao banco de dados (SQLite)
 
 ## Conceitos aplicados
@@ -26,14 +26,26 @@ Projeto de loja virtual desenvolvido em Python, criado como parte do meu aprendi
 - Queries parametrizadas (proteção contra SQL Injection)
 - Organização de código em módulos (separação e responsabilidades)
 
-## Como executar
+## Instalação
 
-\'\'\'bash
+\`\`\`bash
+pip install -r requirements.text
+\`\`\`
+
+## Executando os testes
+
+\`\`\`bash
+python -m pytest
+\`\`\`
+
+## Como executar loja
+
+\`\`\`bash
 python loja.py
-\'\'\'
+\`\`\`
 
 ## Próximos passos
 
-- Testes automatizados
+- Interface web (Flask)
 
 
