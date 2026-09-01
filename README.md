@@ -11,6 +11,12 @@ Projeto de loja virtual desenvolvido em Python, criado como parte do meu aprendi
 - Cadastro de novos produtos
 - Persistência de dados em banco de dados SQLite
 
+## Estrutura do projeto
+
+- `Loja.py` - menu principal e fluxo de interação com o usuário
+- `modelos.py` - classes `Produtos` e `Carrinho`
+- `banco.py` - funções de acesso ao banco de dados (SQLite)
+
 ## Conceitos aplicados
 
 - Programação Orientada a Objetos (classes 'Produto' e 'Carrinho')
@@ -18,6 +24,7 @@ Projeto de loja virtual desenvolvido em Python, criado como parte do meu aprendi
 - Estruturas de repetição e condicionais
 - Banco de dados relacional (SQLite): criação de tabelas, chave estrangeira, INSERT, SELECT, UPDATE, DELETE e JOIN
 - Queries parametrizadas (proteção contra SQL Injection)
+- Organização de código em módulos (separação e responsabilidades)
 
 ## Como executar
 
@@ -25,9 +32,8 @@ Projeto de loja virtual desenvolvido em Python, criado como parte do meu aprendi
 python loja.py
 \'\'\'
 
-##Próximos passos
+## Próximos passos
 
-- Organização do código em múltiplos arquivos/módulos
 - Testes automatizados
 
 

@@ -1,188 +1,41 @@
-import os
-import sqlite3
-
-class Produto:
-    def __init__(self, nome, preco, estoque):
-        self.nome = nome
-        self.preco = preco
-        self.estoque = estoque
-
-    def __str__(self):
-        return f"{self.nome} - R$ {self.preco:.2f} (estoque: {self.estoque})"
-class Carrinho:
-    def __init__(self):
-        self.itens = []
-
-    def adicionar (self, produto):
-        self.itens.append(produto)
-        produto.estoque -= 1
-        inserir_item_carrinho_banco(produto)
-
-        #O carrinho referencia os mesmos objetos Produto já carregados, não cópias. Assim o estoque reflete a mesma instância em memória e no banco
-
-    def esta_vazio(self):
-        return len(self.itens) == 0
-
-    def calcular_total(self):
-        total = 0
-        for produto in self.itens:
-            total += produto.preco
-        return total
-
-    def limpar(self):
-        self.itens.clear()
-        limpar_carrinho_banco()
-
-    def carregar_do_banco(self):
-        linhas = listar_itens_carrinho_banco()
-        for id_produto, nome, preco, estoque in linhas:
-            produto = Produto(nome, preco,estoque)
-            produto.id = id_produto
-            self.itens.append(produto)
-    
-NOME_BANCO = "loja.db"
+from modelos import Produto, Carrinho
+import banco
 
 
-def criar_tabelas():
-    conexao = sqlite3.connect(NOME_BANCO)
-    cursor = conexao.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS produtos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT NOT NULL,
-            preco REAL NOT NULL,
-            estoque INTEGER NOT NULL
-        )    
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS carrinho (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            produto_id INTEGER NOT NULL,
-            FOREIGN KEY (produto_id) REFERENCES produtos (id)
-        )
-    """)
-
-    # Guardei só o produto_id (chave estrangeira), não os dados do produto duplicados aqui. Os detalhes (nome. preco) sempre vêm de produtos via JOIN
-
-    conexao.commit()
-    conexao.close()
-def inserir_produto_banco(produto):
-    conexao = sqlite3.connect(NOME_BANCO)
-    cursor = conexao.cursor()
-
-    cursor.execute(
-        "INSERT INTO produtos (nome, preco, estoque) Values (?, ?, ?)",
-        (produto.nome, produto.preco, produto.estoque)
-    )
-
-    # Query parametrizada (com ?) em vez de concatenar string:
-    # evita SQL Injection e trata os valores com segurança.
-
-    conexao.commit()
-    conexao.close()
-def listar_produtos_banco():
-    conexao = sqlite3.connect(NOME_BANCO)
-    cursor = conexao.cursor()
-
-    cursor.execute("SELECT id, nome, preco, estoque FROM produtos")
-    linhas = cursor.fetchall()
-
-    conexao.close()
-    return linhas
 def popular_produtos_iniciais():
-    linhas = listar_produtos_banco()
+    linhas = banco.listar_produtos()
     if linhas:
         return
 
-    inserir_produto_banco(Produto("Camiseta", 49.90, 10))
-    inserir_produto_banco(Produto("calça jeans", 129.90, 5))
-    inserir_produto_banco(Produto("Tênis", 199.90, 3))
-def carregar_produtos_banco():
-    linhas = listar_produtos_banco()
+    banco.inserir_produto("Camiseta", 49.90, 10)
+    banco.inserir_produto("Calça Jeans", 129.90, 5)
+    banco.inserir_produto("Tênis", 199.90, 3)
+def carregar_produtos():
+    linhas = banco.listar_produtos()
 
     lista_produtos = []
-    for linha_produto in linhas:
-        id_produto, nome, preco, estoque = linha_produto
+    for id_produto, nome, preco, estoque in linhas:
         produto = Produto(nome, preco, estoque)
         produto.id = id_produto
-        lista_produtos.append(produto)  
+        lista_produtos.append(produto)
 
     return lista_produtos
-def atualizar_estoque_banco(produto):
-    conexao = sqlite3.connect(NOME_BANCO)
-    cursor = conexao.cursor()
-
-    cursor.execute(
-        "UPDATE produtos set estoque = ? WHERE id = ?", (produto.estoque, produto.id)
-    )
-
-    # Query parametrizada (com ?) em vez de concatenar string:
-    # evita SQL Injection e trata os valores com segurança.
-
-    conexao.commit()
-    conexao.close()
-def cadastrar_produto_banco(produto):
-    inserir_produto_banco(produto)
-
-    linhas = listar_produtos_banco()
-    ultima_linha = linhas[-1]
-    produto.id = ultima_linha[0]
-
-    # Após inserir, buscamos o id gerado pelo AUTOINCREMENT e guardamos no objeto Python que é necessário para futuros UPDATES
-def inserir_item_carrinho_banco(produto):
-    conexao = sqlite3.connect(NOME_BANCO)
-    cursor = conexao.cursor()
-
-    cursor.execute(
-        "INSERT INTO carrinho (produto_id) VALUES (?)", (produto.id,)
-    )
-
-    # Query parametrizada (com ?) em vez de concatenar string:
-    # evita SQL Injection e trata os valores com segurança.
-
-    conexao.commit()
-    conexao.close()
-def listar_itens_carrinho_banco():
-    conexao = sqlite3.connect(NOME_BANCO)
-    cursor = conexao.cursor()
-
-    cursor.execute("""
-        SELECT produtos.id, produtos.nome, produtos.preco, produtos.estoque
-        FROM carrinho
-        JOIN produtos on carrinho.produto_id = produtos.id
-    """)
-    linhas = cursor.fetchall()
-
-    conexao.close()
-    return linhas
-def limpar_carrinho_banco():
-    conexao = sqlite3.connect(NOME_BANCO)
-    cursor = conexao.cursor()
-
-    cursor.execute("DELETE FROM carrinho")
-
-    conexao.commit
-    conexao.close()
 
 
-criar_tabelas()
+banco.criar_tabelas()
 popular_produtos_iniciais()
-produtos = carregar_produtos_banco()
-
+produtos = carregar_produtos()
 carrinho = Carrinho()
 carrinho.carregar_do_banco()
 
 
-
-def linha(msg, caractere = "="):
+def linha(msg, caractere="="):
     tamanho = len(msg) + 10
     print(f"\n{caractere * tamanho}")
     print(f" {msg.center(tamanho)}")
     print(f"{caractere * tamanho}\n")
 def cadastrar_produto():
-    linha ("Cadastrar novo produto", "-")
+    linha("Cadastrar novo produto", "-")
     nome = input("Nome: ")
 
     preco_texto = input("Preço: ")
@@ -191,7 +44,6 @@ def cadastrar_produto():
     except ValueError:
         print("\nPreço inválido. Use números, ex: 59.90")
         return
-
     # try/except em vez de isdigit(): preço tem casas decimais, e isdigit() só reconhece números inteiros.
 
     estoque_texto = input("Quantidade em estoque: ")
@@ -201,8 +53,8 @@ def cadastrar_produto():
     estoque = int(estoque_texto)
 
     novo_produto = Produto(nome, preco, estoque)
+    novo_produto.id = banco.inserir_produto(nome, preco, estoque)
     produtos.append(novo_produto)
-    cadastrar_produto_banco(novo_produto)
     print(f"\n'{nome}' cadastrado com sucesso!")
 def mostrar_produtos():
     for i, produto in enumerate(produtos):
@@ -215,14 +67,14 @@ def adicionar_ao_carrinho():
 
     if not escolha.isdigit():
         print("\nEntrada inválida. Digite um número")
-        return      
+        return
 
     indice = int(escolha) - 1
 
     if indice < 0 or indice >= len(produtos):
         print("\nProduto não encontrado.")
         return
-    
+
     produto = produtos[indice]
 
     if produto.estoque <= 0:
@@ -230,7 +82,7 @@ def adicionar_ao_carrinho():
         return
 
     carrinho.adicionar(produto)
-    atualizar_estoque_banco(produto)
+    banco.atualizar_estoque(produto.id, produto.estoque)
 
     print(f"\n'{produto.nome}' adicionado ao carrinho!")
 def ver_carrinho():
@@ -239,8 +91,6 @@ def ver_carrinho():
         return
 
     linha("Seu carrinho", "-")
-    total = 0 
-
     for produto in carrinho.itens:
         print(f"- {produto.nome} - R$ {produto.preco:.2f}")
     total = carrinho.calcular_total()
@@ -248,7 +98,7 @@ def ver_carrinho():
     print(f"\nTotal: R$ {total:.2f}")
 def finalizar_compra():
     if carrinho.esta_vazio():
-        print(f"\nSeu carrinho está vazio. Adicione produtos antes de finalizar a compra.")
+        print("\nSeu carrinho está vazio. Adicione produtos antes de finalizar a compra.")
         return
 
     ver_carrinho()
@@ -259,10 +109,10 @@ def finalizar_compra():
         carrinho.limpar()
     else:
         print("Compra Cancelada.")
-        
-while True:
 
-    linha("LOJA VITUAL")
+
+while True:
+    linha("LOJA VIRTUAL")
     print("1. Ver produtos")
     print("2. Adicionar o produto ao carrinho")
     print("3. Ver carrinho")
@@ -273,7 +123,7 @@ while True:
     opcao = input("Escolha uma opção: ")
 
     if opcao == "1":
-        linha("Lista de produtos", '-')
+        linha("Lista de produtos", "-")
         mostrar_produtos()
     elif opcao == "2":
         adicionar_ao_carrinho()
@@ -286,10 +136,5 @@ while True:
     elif opcao == "6":
         print("\n Obrigado por visitar a loja!")
         break
-
     else:
         print("\n Opção inválida, tente novamente")
-
-
-    
-
