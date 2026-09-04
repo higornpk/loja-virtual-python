@@ -1,5 +1,7 @@
 from modelos import Produto, Carrinho
 import banco
+import sys
+import re
 
 
 def popular_produtos_iniciais():
@@ -20,20 +22,99 @@ def carregar_produtos():
         lista_produtos.append(produto)
 
     return lista_produtos
+def linha(msg, caractere="="):
+    tamanho = len(msg) + 10
+    print(f"\n{caractere * tamanho}")
+    print(f" {msg.center(tamanho)}")
+    print(f"{caractere * tamanho}\n")
+def validar_senha(senha):
+    padrao = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$"
 
+    # O padrão exige: minúscula, maiúscula, número, especial e no mínimo 8 caracteres
+    
+    return bool(re.match(padrao, senha))    
+def criar_conta():
+    linha("CADASTRO DE CONTA", "-")
+    nome_usuario = input("Nome de usuário: ")
+
+    if banco.buscar_usuario(nome_usuario):
+                print("\nEsse nome de usuário ja existe.")
+                return None
+
+    while True:
+        senha = input("Senha: ")
+
+        if validar_senha(senha):
+            print("\nSenha válida!")
+            break
+        else:
+            print("\nSenha fraca! A senha deve conter:")
+            print(" - Pelo menos 8 caracteres")
+            print(" - Pelo menos uma letra maiúscula")
+            print(" - Pelo menos uma letra minúscula")
+            print(" - Pelo menos um número")
+            print(" - Pelo menos um caractere especial (@$!%*?&)")
+
+    banco.cadastrar_usuario(nome_usuario, senha)
+    print(f"\nConta criada com sucesso! Bem vindo(a), {nome_usuario}.")
+    return{"nome_usuario": nome_usuario, "admin": 0}
+def fazer_login():
+    linha("LOGIN", "-")
+    while True:
+
+        nome_usuario = input("Usuário: ")
+
+        resultado = banco.buscar_usuario(nome_usuario)
+        if not resultado:
+            print("\nUsuário não encontrado.\n")
+        else:
+            break
+
+    while True:
+
+        senha = input("Senha: ")
+
+        id_usuario, nome, senha_hash, admin = resultado
+
+        if banco.gerar_hash_senha(senha) != senha_hash:
+            print("\nSenha incorreta.\n")
+        else:
+            break
+
+    print(f"\nBem-vindo(a) de volta, {nome}!")
+    return {"nome_usuario": nome, "admin": admin}
+def tela_inicial():
+    while True:
+        linha("LOJA VIRTUAL")
+        print("1. Fazer login")
+        print("2. Criar conta")
+        print("3. Sair")
+
+        opcao = input("Escolha uma opção: ")
+
+        if opcao == "1":
+            usuario = fazer_login()
+        elif opcao == "2":
+            usuario = criar_conta()
+        elif opcao == "3":
+            print("\nAté logo!")
+            sys.exit()
+        else:
+            print("\nOpção inválida.")
+            continue
+
+        if usuario is not None:
+            return usuario   
 
 banco.criar_tabelas()
 popular_produtos_iniciais()
 produtos = carregar_produtos()
 carrinho = Carrinho()
 carrinho.carregar_do_banco()
+usuario_logado = tela_inicial()
 
 
-def linha(msg, caractere="="):
-    tamanho = len(msg) + 10
-    print(f"\n{caractere * tamanho}")
-    print(f" {msg.center(tamanho)}")
-    print(f"{caractere * tamanho}\n")
+
 def cadastrar_produto():
     linha("Cadastrar novo produto", "-")
     nome = input("Nome: ")
@@ -56,6 +137,61 @@ def cadastrar_produto():
     novo_produto.id = banco.inserir_produto(nome, preco, estoque)
     produtos.append(novo_produto)
     print(f"\n'{nome}' cadastrado com sucesso!")
+def editar_produto():
+    linha("EDITAR PRODUTO", "-")
+    mostrar_produtos()
+
+    escolha = input("\nDigite o número do produto que deseja editar: ")
+
+    if not escolha.isdigit():
+        print("\nEntrada inválida. Digite um número.")
+        return
+
+    indice = int(escolha) - 1
+
+    if indice < 0 or indice >= len(produtos):
+        print("\nProduto não encontrado.")
+        return
+
+    produto = produtos[indice]
+
+    print(f"\nEditando '{produto.nome}'. Deixe em branco para manter o valor atual\n")
+
+    novo_nome = input(f"Nome ({produto.nome}): ")
+    if novo_nome == "":
+        novo_nome = produto.nome
+
+    novo_preco_texto = input(f"Preço ({produto.preco:.2f}): ")
+    if novo_preco_texto == "":
+        novo_preco = produto.preco
+    else:
+        try:
+            novo_preco = float(novo_preco_texto)
+        except ValueError:
+            print("\nPreço inválido. Edição cancelada.")
+            return
+
+    quantidade_texto = input(f"Adicionar ao estoque atual ({produto.estoque}) [0 para não alterar]: ")
+    if quantidade_texto == "":
+        quantidade_texto = "0"
+
+    if not quantidade_texto.lstrip("-").isdigit():
+        print("\nQuantidade inválida. Edição cancelada.")
+        return
+
+    quantidade = int(quantidade_texto)
+    novo_estoque = produto.estoque + quantidade
+
+    if novo_estoque < 0:
+        print("\nEstoque não pode ficar negativo. Edição cancelada.")
+        return
+
+    produto.nome = novo_nome
+    produto.preco = novo_preco
+    produto.estoque = novo_estoque
+    banco.atualizar_produto(produto.id, novo_nome, novo_preco, novo_estoque)
+
+    print(f"\nProduto atualizado com sucesso!")
 def mostrar_produtos():
     for i, produto in enumerate(produtos):
         print(f"{i + 1}. {produto}")
@@ -113,12 +249,19 @@ def finalizar_compra():
 
 while True:
     linha("LOJA VIRTUAL")
+    nome_formatado = usuario_logado['nome_usuario'].capitalize()
+    print(f"Logado como: {nome_formatado}")
     print("1. Ver produtos")
     print("2. Adicionar o produto ao carrinho")
     print("3. Ver carrinho")
     print("4. Finalizar compra")
-    print("5. Cadastrar novo produto")
-    print("6. Sair")
+
+    if usuario_logado["admin"]:
+        print("5. Cadastrar novo produto")
+        print("6. Editar produto")
+        print("7. Sair")
+    else:
+        print("5. Sair")
 
     opcao = input("Escolha uma opção: ")
 
@@ -131,10 +274,17 @@ while True:
         ver_carrinho()
     elif opcao == "4":
         finalizar_compra()
-    elif opcao == "5":
+    elif opcao == "5" and usuario_logado["admin"]:
         cadastrar_produto()
-    elif opcao == "6":
-        print("\n Obrigado por visitar a loja!")
+    elif opcao == "5" and not usuario_logado["admin"]:
+        nome_formatado = usuario_logado['nome_usuario'].capitalize()
+        print(f"\n Obrigado por visitar a loja {nome_formatado}!")
+        break
+    elif opcao == "6" and usuario_logado["admin"]:
+        editar_produto()
+    elif opcao == "7" and usuario_logado["admin"]:
+        nome_formatado = usuario_logado['nome_usuario'].capitalize()
+        print(f"\nAté mais {nome_formatado}")
         break
     else:
         print("\n Opção inválida, tente novamente")

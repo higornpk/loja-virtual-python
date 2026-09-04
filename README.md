@@ -4,11 +4,14 @@ Projeto de loja virtual desenvolvido em Python, criado como parte do meu aprendi
 
 ## Funcionalidades
 
+- Sistema de login e criação de conta
+- Controle de acesso (usuario admin x cliente)
 - Listagem de produtos
 - Adição de produtos ao carrinho
 - Visualização do carrinho com total
 - Finalização de compra
-- Cadastro de novos produtos
+- Cadastro de novos produtos (admin)
+- Edição de produtos existentes (admin)
 - Persistência de dados em banco de dados SQLite
 
 ## Estrutura do projeto
@@ -25,6 +28,8 @@ Projeto de loja virtual desenvolvido em Python, criado como parte do meu aprendi
 - Banco de dados relacional (SQLite): criação de tabelas, chave estrangeira, INSERT, SELECT, UPDATE, DELETE e JOIN
 - Queries parametrizadas (proteção contra SQL Injection)
 - Organização de código em módulos (separação e responsabilidades)
+- Autenticação de usuário com hash de senha (hashlib) e validação de senha forte com expressões regulares (re)
+- Controle de acesso ao perfil de usuário (admin x cliente)
 
 ## Instalação
 

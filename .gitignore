@@ -1,3 +1,4 @@
 __pycache__/
 loja.db
 .pytest_cache/
+criar_admin.py

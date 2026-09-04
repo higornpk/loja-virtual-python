@@ -1,4 +1,5 @@
 import sqlite3
+import hashlib
 
 NOME_BANCO = "loja.db"
 
@@ -24,6 +25,15 @@ def criar_tabelas():
     """)
 
     # Guardamos só o produto_id (chave estrangeira), não os dados do produto duplicados aqui. Os detalhes (nome, preço) sempre vêm de produtos via JOIN.
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome_usuario TEXT NOT NULL UNIQUE,
+            senha_hash TEXT NOT NULL,
+            admin INTEGER NOT NULL DEFAULT 0
+        )
+    """)
 
     conexao.commit()
     conexao.close()
@@ -64,6 +74,17 @@ def atualizar_estoque(produto_id, novo_estoque):
     conexao.commit()
     conexao.close()
     # Query parametrizada (com ?) em vez de concatenar string. Evita SQL Injection e trata os valores com segurança.
+def atualizar_produto(produto_id, nome, preco, estoque):
+    conexao = sqlite3.connect(NOME_BANCO)
+    cursor = conexao.cursor()
+
+    cursor.execute(
+        "UPDATE produtos SET nome = ?, preco = ?, estoque = ? WHERE id = ?",
+        (nome, preco, estoque, produto_id)   
+    )
+
+    conexao.commit()
+    conexao.close()
 def inserir_item_carrinho(produto_id):
     conexao = sqlite3.connect(NOME_BANCO)
     cursor = conexao.cursor
@@ -99,3 +120,30 @@ def limpar_carrinho():
 
     conexao.commit()
     conexao.close()
+def gerar_hash_senha(senha):
+    return hashlib.sha256(senha.encode()).hexdigest()
+def cadastrar_usuario(nome_usuario, senha, admin=0):
+    conexao = sqlite3.connect(NOME_BANCO)
+    cursor = conexao.cursor()
+
+    senha_hash = gerar_hash_senha(senha)
+
+    cursor.execute(
+        "INSERT INTO usuarios (nome_usuario, senha_hash, admin) VALUES (?, ?, ?)",
+        (nome_usuario, senha_hash, admin)
+    )   
+
+    conexao.commit()
+    conexao.close()
+def buscar_usuario(nome_usuario):
+    conexao = sqlite3.connect(NOME_BANCO)
+    cursor = conexao.cursor()
+
+    cursor.execute(
+        "SELECT id, nome_usuario, senha_hash, admin FROM usuarios WHERE nome_usuario = ?",
+        (nome_usuario,)
+    )
+    resultado = cursor.fetchone()
+
+    conexao.close()
+    return resultado
